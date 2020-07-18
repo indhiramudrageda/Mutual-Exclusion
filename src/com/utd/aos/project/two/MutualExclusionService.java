@@ -102,6 +102,8 @@ public class MutualExclusionService {
 	private void checkCSEligibility(Message message) {
 		//1. If received message has timestamp larger than that of its own request, add to receivedMessages list
 		
+		//2. check if list size is equal to n-1 and that the top of queue is current request. If so, set csEligible to true.
+		
 	}
 	
 	private void send(Message message, String destHost, int destPort) {
