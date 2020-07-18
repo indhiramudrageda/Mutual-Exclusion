@@ -12,7 +12,7 @@ public class Message implements Serializable{
 	private String type;
 	public static final String TYPE_REQUEST = "REQUEST";
 	public static final String TYPE_REPLY = "REPLY";
-	public static final String TYPE_RESPONSE = "RESPONSE";
+	public static final String TYPE_RELEASE = "RELEASE";
 	
 	public Message(int ID, int clock, String type) {
 		this.ID = ID;
@@ -27,7 +27,7 @@ public class Message implements Serializable{
 	public void setID(int ID) {
 		this.ID = ID;
 	}
-
+	
 	public int getClock() {
 		return clock;
 	}
@@ -42,5 +42,11 @@ public class Message implements Serializable{
 
 	public void setType(String type) {
 		this.type = type;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		Message m = (Message)o;
+		return this.ID == m.ID;
 	}
 }
