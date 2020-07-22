@@ -6,59 +6,57 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Set;
 
 public class MutualExclusionService {
-    private int clock;
-    private volatile boolean isCSEligible;
-    private PriorityQueue<Message> queue;
+    private int clock; //unsafe
+    private boolean isCSEligible; //unsafe
+    private PriorityQueue<Message> queue; //unsafe
     private Node node;
-    private Message currentRequest;
-    private Set<Integer> receivedMessages;
+    private Message currentRequest; //unsafe
+    private Set<Integer> receivedMessages; 
 
     public MutualExclusionService(Node node) {
         setNode(node);
+        setReceivedMessages(new HashSet<>());
         this.queue = new PriorityQueue<>(new Comparator<Message>() {
             @Override
             public int compare(Message m1, Message m2) {
                 return m1.getClock() - m2.getClock() == 0 ? m1.getID() - m2.getID() : m1.getClock() - m2.getClock();
-
             }
         });
-
-        //Listen to messages coming from other processes.
-        MessageListener messageListener = new MessageListener(this);
-        messageListener.start();
     }
 
     public boolean csEnter() {
         //1. place current request message in queue.
         incremeantClock();
         setCurrentRequest(new Message(getNode().getID(), getClock(), Message.TYPE_REQUEST));
-        queue.offer(getCurrentRequest());
-
+        getQueue().offer(getCurrentRequest());
 
         //2. broadcast request messages to all other nodes.
         sendRequestMessage();
 
-        while (!isCSEligible()) ;
+        while (!isCSEligible());
         return true;
     }
 
-    public void csLeave() {
+    public synchronized void csLeave() {
         //1. remove the current request message from queue.
-        queue.remove(getCurrentRequest());
+        getQueue().remove(getCurrentRequest());
 
         //2. broadcast release message to all other nodes
         incremeantClock();
         Message message = new Message(getNode().getID(), getClock(), Message.TYPE_RELEASE);
         sendReleaseMessage(message);
         setCurrentRequest(null);
+        getReceivedMessages().clear();
         setCSEligible(false);
     }
 
     private void sendRequestMessage() {
+    	//System.out.println("Sending request messages");
         //1. broadcast request messages to all other nodes.
         for (Node node : getNode().getNodeList()) {
             if (node.getID() == getNode().getID()) continue;
@@ -67,13 +65,15 @@ public class MutualExclusionService {
     }
 
     public void receiveRequestMessage(Message message) {
+    	//System.out.println("Receiving request messages");
         //1. add request message to queue.
-        queue.offer(message);
+        getQueue().offer(message);
 
-        //2. Increment clock
-        incremeantClock();
-
+        //2. Update clock
+        updateClock(message.getClock());
+        
         //3. send reply message back to the requesting process
+        incremeantClock();
         Node sender = getNode().getNodeList()[message.getID()];
         sendReplyMessage(new Message(getNode().getID(), getClock(), Message.TYPE_REPLY), sender.getHostname(), sender.getPort());
 
@@ -81,49 +81,57 @@ public class MutualExclusionService {
         checkCSEligibility(message);
     }
 
-    private void sendReplyMessage(Message message, String destHost, int destPort) {
+	private void sendReplyMessage(Message message, String destHost, int destPort) {
+    	//System.out.println("Sending reply messages");
         //1. broadcast reply messages to all other nodes.
         send(message, destHost, destPort);
     }
 
-    public void receiveReplyMessage(Message message) {
+    public  void receiveReplyMessage(Message message) {
+    	//System.out.println("Receiving reply messages");
         //1. Increment clock
-        incremeantClock();
+    	updateClock(message.getClock());
         //2. check for cs eligibility
         checkCSEligibility(message);
     }
 
     private void sendReleaseMessage(Message message) {
+    	if(message == null) {
+    		System.out.println("Null being sent");
+    	}
+    	//System.out.println("Sending release messages");
         //1. broadcast release messages to all other nodes.
-        Message msg = new Message(getNode().getID(), getClock(), Message.TYPE_RELEASE);
-        sendReleaseMessage(msg);
-        setCurrentRequest(null);
-        setCSEligible(false);
+    	for (Node node : getNode().getNodeList()) {
+            if (node.getID() == getNode().getID()) continue;
+            send(message, node.getHostname(), node.getPort());
+        }
     }
 
     public void receiveReleaseMessage(Message message) {
+    	if(message == null) {
+    		System.out.println("Null received");
+    	}
+    	//System.out.println("Receiving release messages");
         //1. Increment clock;
-        incremeantClock();
+    	updateClock(message.getClock());
         //2. remove the request message of the process which sent this message from queue.
-        queue.remove(message);
+        getQueue().remove(message);
         //3. check for cs eligibility
         checkCSEligibility(message);
-
-
     }
 
-    private void checkCSEligibility(Message message) {
+    private synchronized void checkCSEligibility(Message message) {
+    	//System.out.println("Inside eligibility check");
+    	if(getCurrentRequest() == null || isCSEligible()) return;
+    	
         //1. If received message has timestamp larger than that of its own request, add to receivedMessages list
-        if (message.getClock() > getCurrentRequest().getClock()) {
-            receivedMessages.add(message.getID());
-
-        }
+        if (message.getClock() > getCurrentRequest().getClock()) 
+        	getReceivedMessages().add(message.getID());
 
         //2. check if list size is equal to n-1 and that the top of queue is current request. If so, set csEligible to true.
-        if (receivedMessages.size() == node.getNumberOfNodes() - 1 && getCurrentRequest().equals(getQueue().peek())) {
-            setCSEligible(true);
-        }
-
+        if (getReceivedMessages().size() == getNode().getNumberOfNodes() - 1 
+        		&& getCurrentRequest().equals(getQueue().peek())) 
+        	setCSEligible(true);
     }
 
     private void send(Message message, String destHost, int destPort) {
@@ -131,11 +139,14 @@ public class MutualExclusionService {
         OutputStream os = null;
         ObjectOutputStream oos = null;
         try {
-            s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
-            //s = new Socket("127.0.0.1", destPort);
+            //s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
+            s = new Socket("127.0.0.1", destPort);
             os = s.getOutputStream();
             oos = new ObjectOutputStream(os);
             oos.writeObject(message);
+            oos.close();
+            os.close();
+            s.close();
         } catch (IOException e) {
             System.out.println("Error sending data to " + destHost + ": " + e.getMessage());
         }
@@ -176,6 +187,10 @@ public class MutualExclusionService {
     public void incremeantClock() {
         this.clock++;
     }
+    
+    private void updateClock(int clock) {
+		setClock(Math.max(getClock(), clock)+1);
+	}
 
     public boolean isCSEligible() {
         return isCSEligible;

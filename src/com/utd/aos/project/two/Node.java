@@ -21,9 +21,13 @@ public class Node {
 	private int interRequestDelay;
 	private int csExecutionTime;
 	private int requestsToGenerate;
-	private List<int[]> csIntervals;
+	private List<double[]> csIntervals;
+	
+	private MutualExclusionService mutexService;
+	private MutualExclusionTest mutexTest;
 	
 	private static final String CONFIG_FILE = "config.txt";
+	public static final int COORDINATOR = 0;
 	
 	public Node(int ID, String hostname, int port) {
 		setID(ID);
@@ -36,8 +40,22 @@ public class Node {
 		setHostname(hostname);
 		setPort(port);
 		setNumberOfNodes(numberOfNodes);
+		setInterRequestDelay(interRequestDelay);
+		setCsExecutionTime(csExecutionTime);
+		setRequestsToGenerate(requestsToGenerate);
 		setNodeList(nodeList);
 		setCsIntervals(new ArrayList<>());
+		
+		setMutexService(new MutualExclusionService(this));
+		setMutexTest(new MutualExclusionTest(this));
+		
+		//Generate critical section requests periodically
+		CSRequestGenerator requestGenerator = new CSRequestGenerator(this);
+		requestGenerator.start();
+		
+		//Listen to messages coming from other processes.
+        MessageListener messageListener = new MessageListener(this);
+        messageListener.start();
 	}
 	
 	public static void main(String[] args) {
@@ -47,6 +65,7 @@ public class Node {
 		int requestsToGenerate = 0;
 		int ID = 0;
 		
+		String ip = args[0];
 		try (BufferedReader br = new BufferedReader(new FileReader(CONFIG_FILE))) {
 			String currentLine;
 			int n = 0;
@@ -71,7 +90,8 @@ public class Node {
 				String currHost = params[1]+".utdallas.edu";
 				int currPort = Integer.parseInt(params[2]);
 				
-				if(inetAddress.getHostAddress().equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
+				if(ip.equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
+				//if(inetAddress.getHostAddress().equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
 				nodeList[currID] = new Node(currID, currHost, currPort);
 				n--;
 			}
@@ -146,13 +166,33 @@ public class Node {
 	public void setRequestsToGenerate(int requestsToGenerate) {
 		this.requestsToGenerate = requestsToGenerate;
 	}
+	
+	public void decrementRequestsToGenerate() {
+		this.requestsToGenerate--;
+	}
 
-	public List<int[]> getCsIntervals() {
+	public List<double[]> getCsIntervals() {
 		return csIntervals;
 	}
 
-	public void setCsIntervals(List<int[]> csIntervals) {
+	public void setCsIntervals(List<double[]> csIntervals) {
 		this.csIntervals = csIntervals;
+	}
+
+	public MutualExclusionService getMutexService() {
+		return mutexService;
+	}
+
+	public void setMutexService(MutualExclusionService mutexService) {
+		this.mutexService = mutexService;
+	}
+
+	public MutualExclusionTest getMutexTest() {
+		return mutexTest;
+	}
+
+	public void setMutexTest(MutualExclusionTest mutexTest) {
+		this.mutexTest = mutexTest;
 	}
 
 	private static String preprocessConfig(String currentLine) {

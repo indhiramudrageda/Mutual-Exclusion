@@ -8,6 +8,8 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author indhiramudrageda
@@ -18,12 +20,12 @@ public class MessageListener extends Thread{
     private ObjectInputStream objectInputStream; 
     private ServerSocket tcpServersocket; 
     private Socket socket;
-    private final MutualExclusionService service;
+    private final Node node;
     
-	public MessageListener(MutualExclusionService service) {
-		this.service = service;
+	public MessageListener(Node node) {
+		this.node = node;
 		try {
-			tcpServersocket = new ServerSocket(service.getNode().getPort());
+			tcpServersocket = new ServerSocket(getNode().getPort());
 		} catch (IOException e) {
 			System.out.println("Error creating server socket: "+ e.getMessage());
 		}
@@ -40,10 +42,17 @@ public class MessageListener extends Thread{
             	inStream = socket.getInputStream();
         		objectInputStream = new ObjectInputStream(inStream); 
                 Object obj = objectInputStream.readObject();
+                if(obj instanceof ArrayList) getNode().getMutexTest().receiveCSIntervals((List<double[]>) obj);
+                else {
+                	Message msg = (Message)obj;
+                    if(msg.getType().equals(Message.TYPE_REQUEST)) getNode().getMutexService().receiveRequestMessage(msg);
+                    else if(msg.getType().equals(Message.TYPE_REPLY)) getNode().getMutexService().receiveReplyMessage(msg);
+                    else if(msg.getType().equals(Message.TYPE_RELEASE)) getNode().getMutexService().receiveReleaseMessage(msg);
+                }
             } 
             catch (IOException | ClassNotFoundException e) { 
-            	System.out.println("Error reading message sent to :" + service.getNode().getID()+e.getMessage()); 
-            	System.out.println("Error reading message sent to :" + service.getNode().getID()+e.getStackTrace()); 
+            	System.out.println("Error reading message sent to :" + getNode().getID()+e.getMessage()); 
+            	System.out.println("Error reading message sent to :" + getNode().getID()+e.getStackTrace()); 
             	try {
 					inStream.close();
 					objectInputStream.close();
@@ -54,4 +63,8 @@ public class MessageListener extends Thread{
             } 
         }           
     }
+
+	public Node getNode() {
+		return node;
+	}
 }
