@@ -12,11 +12,13 @@ import java.util.Set;
 
 public class MutualExclusionService {
     private int clock; //unsafe
-    private boolean isCSEligible; //unsafe
+    private volatile boolean isCSEligible; //unsafe
     private PriorityQueue<Message> queue; //unsafe
     private Node node;
     private Message currentRequest; //unsafe
     private Set<Integer> receivedMessages; 
+    public int sentMsgs;
+    public int rcvdMsgs;
 
     public MutualExclusionService(Node node) {
         setNode(node);
@@ -30,10 +32,12 @@ public class MutualExclusionService {
     }
 
     public boolean csEnter() {
-        //1. place current request message in queue.
-        incremeantClock();
-        setCurrentRequest(new Message(getNode().getID(), getClock(), Message.TYPE_REQUEST));
-        getQueue().offer(getCurrentRequest());
+    	synchronized (this) {
+    		//1. place current request message in queue.
+            incremeantClock();
+            setCurrentRequest(new Message(getNode().getID(), getClock(), Message.TYPE_REQUEST));
+            getQueue().offer(getCurrentRequest());
+		}
 
         //2. broadcast request messages to all other nodes.
         sendRequestMessage();
@@ -55,7 +59,7 @@ public class MutualExclusionService {
         setCSEligible(false);
     }
 
-    private void sendRequestMessage() {
+    private synchronized void sendRequestMessage() {
     	//System.out.println("Sending request messages");
         //1. broadcast request messages to all other nodes.
         for (Node node : getNode().getNodeList()) {
@@ -64,7 +68,7 @@ public class MutualExclusionService {
         }
     }
 
-    public void receiveRequestMessage(Message message) {
+    public synchronized void receiveRequestMessage(Message message) {
     	//System.out.println("Receiving request messages");
         //1. add request message to queue.
         getQueue().offer(message);
@@ -87,7 +91,7 @@ public class MutualExclusionService {
         send(message, destHost, destPort);
     }
 
-    public  void receiveReplyMessage(Message message) {
+    public synchronized void receiveReplyMessage(Message message) {
     	//System.out.println("Receiving reply messages");
         //1. Increment clock
     	updateClock(message.getClock());
@@ -96,9 +100,6 @@ public class MutualExclusionService {
     }
 
     private void sendReleaseMessage(Message message) {
-    	if(message == null) {
-    		System.out.println("Null being sent");
-    	}
     	//System.out.println("Sending release messages");
         //1. broadcast release messages to all other nodes.
     	for (Node node : getNode().getNodeList()) {
@@ -107,10 +108,7 @@ public class MutualExclusionService {
         }
     }
 
-    public void receiveReleaseMessage(Message message) {
-    	if(message == null) {
-    		System.out.println("Null received");
-    	}
+    public synchronized void receiveReleaseMessage(Message message) {
     	//System.out.println("Receiving release messages");
         //1. Increment clock;
     	updateClock(message.getClock());
@@ -135,6 +133,7 @@ public class MutualExclusionService {
     }
 
     private void send(Message message, String destHost, int destPort) {
+    	sentMsgs++;
         Socket s = null;
         OutputStream os = null;
         ObjectOutputStream oos = null;

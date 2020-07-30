@@ -1,5 +1,7 @@
 package com.utd.aos.project.two;
 
+import java.util.Random;
+
 public class CSRequestGenerator extends Thread {
 
 	private Node node;
@@ -15,23 +17,23 @@ public class CSRequestGenerator extends Thread {
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
+		Random rand = new Random();
 		while(node.getRequestsToGenerate() > 0) {
 			try {
 				getNode().getMutexService().csEnter();
 				double start = System.currentTimeMillis();
-				//System.out.println("Enterring CS :"+start);
-				Thread.sleep(node.getCsExecutionTime());
-				getNode().getMutexService().csLeave();
+				Thread.sleep((long)rand.nextGaussian()+node.getCsExecutionTime());
 				double end = System.currentTimeMillis();
-				//System.out.println("Leaving CS :"+end);
+				getNode().getMutexService().csLeave();
 				node.getCsIntervals().add(new double[] {start, end});
 				node.decrementRequestsToGenerate();
-				Thread.sleep(node.getInterRequestDelay());
+				Thread.sleep((long)rand.nextGaussian()+node.getInterRequestDelay());
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
 		System.out.println("Finisehd all requests: "+getNode().getMutexService().getClock());
+		System.out.println("Msgs sent: "+getNode().getMutexService().sentMsgs+" Rcvd Msgs: "+getNode().getMutexService().rcvdMsgs);
 		getNode().getMutexTest().sendCSIntervals(node.getCsIntervals());
 	}
 

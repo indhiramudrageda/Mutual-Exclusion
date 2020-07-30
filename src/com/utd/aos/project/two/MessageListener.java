@@ -45,6 +45,7 @@ public class MessageListener extends Thread{
                 if(obj instanceof ArrayList) getNode().getMutexTest().receiveCSIntervals((List<double[]>) obj);
                 else {
                 	Message msg = (Message)obj;
+                	getNode().getMutexService().rcvdMsgs++;
                     if(msg.getType().equals(Message.TYPE_REQUEST)) getNode().getMutexService().receiveRequestMessage(msg);
                     else if(msg.getType().equals(Message.TYPE_REPLY)) getNode().getMutexService().receiveReplyMessage(msg);
                     else if(msg.getType().equals(Message.TYPE_RELEASE)) getNode().getMutexService().receiveReleaseMessage(msg);
