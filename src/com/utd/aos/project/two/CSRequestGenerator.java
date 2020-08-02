@@ -21,19 +21,22 @@ public class CSRequestGenerator extends Thread {
 		while(node.getRequestsToGenerate() > 0) {
 			try {
 				getNode().getMutexService().csEnter();
-				double start = System.currentTimeMillis();
+				long start = System.currentTimeMillis();
 				Thread.sleep((long)rand.nextGaussian()+node.getCsExecutionTime());
-				double end = System.currentTimeMillis();
+				long end = System.currentTimeMillis();
 				getNode().getMutexService().csLeave();
-				node.getCsIntervals().add(new double[] {start, end});
+				node.getCsIntervals().add(new long[] {start, end});
 				node.decrementRequestsToGenerate();
 				Thread.sleep((long)rand.nextGaussian()+node.getInterRequestDelay());
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		System.out.println("Finisehd all requests: "+getNode().getMutexService().getClock());
-		System.out.println("Msgs sent: "+getNode().getMutexService().sentMsgs+" Rcvd Msgs: "+getNode().getMutexService().rcvdMsgs);
+		synchronized (node.getMutexService()) {
+			System.out.println("Finisehd all requests: "+getNode().getMutexService().getClock());
+			System.out.println("Msgs sent: "+getNode().getMutexService().sentMsgs+" Rcvd Msgs: "+getNode().getMutexService().rcvdMsgs);
+		}
+		
 		getNode().getMutexTest().sendCSIntervals(node.getCsIntervals());
 	}
 

@@ -42,8 +42,9 @@ public class MessageListener extends Thread{
             	inStream = socket.getInputStream();
         		objectInputStream = new ObjectInputStream(inStream); 
                 Object obj = objectInputStream.readObject();
-                if(obj instanceof ArrayList) getNode().getMutexTest().receiveCSIntervals((List<double[]>) obj);
-                else {
+                if(obj instanceof ArrayList) {
+                	getNode().getMutexTest().receiveCSIntervals((List<long[]>) obj);
+                } else {
                 	Message msg = (Message)obj;
                 	getNode().getMutexService().rcvdMsgs++;
                     if(msg.getType().equals(Message.TYPE_REQUEST)) getNode().getMutexService().receiveRequestMessage(msg);

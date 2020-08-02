@@ -21,7 +21,7 @@ public class Node {
 	private int interRequestDelay;
 	private int csExecutionTime;
 	private int requestsToGenerate;
-	private List<double[]> csIntervals;
+	private List<long[]> csIntervals;
 	
 	private MutualExclusionService mutexService;
 	private MutualExclusionTest mutexTest;
@@ -65,7 +65,7 @@ public class Node {
 		int requestsToGenerate = 0;
 		int ID = 0;
 		
-		String ip = args[0];
+		//String ip = args[0];
 		try (BufferedReader br = new BufferedReader(new FileReader(CONFIG_FILE))) {
 			String currentLine;
 			int n = 0;
@@ -90,8 +90,8 @@ public class Node {
 				String currHost = params[1]+".utdallas.edu";
 				int currPort = Integer.parseInt(params[2]);
 				
-				if(ip.equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
-				//if(inetAddress.getHostAddress().equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
+				//if(ip.equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
+				if(inetAddress.getHostAddress().equals(InetAddress.getByName(currHost).getHostAddress())) ID = currID;
 				nodeList[currID] = new Node(currID, currHost, currPort);
 				n--;
 			}
@@ -171,11 +171,11 @@ public class Node {
 		this.requestsToGenerate--;
 	}
 
-	public List<double[]> getCsIntervals() {
+	public List<long[]> getCsIntervals() {
 		return csIntervals;
 	}
 
-	public void setCsIntervals(List<double[]> csIntervals) {
+	public void setCsIntervals(List<long[]> csIntervals) {
 		this.csIntervals = csIntervals;
 	}
 

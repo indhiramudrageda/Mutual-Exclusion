@@ -43,6 +43,7 @@ public class MutualExclusionService {
         sendRequestMessage();
 
         while (!isCSEligible());
+        incremeantClock();
         return true;
     }
 
@@ -60,7 +61,6 @@ public class MutualExclusionService {
     }
 
     private synchronized void sendRequestMessage() {
-    	//System.out.println("Sending request messages");
         //1. broadcast request messages to all other nodes.
         for (Node node : getNode().getNodeList()) {
             if (node.getID() == getNode().getID()) continue;
@@ -69,7 +69,6 @@ public class MutualExclusionService {
     }
 
     public synchronized void receiveRequestMessage(Message message) {
-    	//System.out.println("Receiving request messages");
         //1. add request message to queue.
         getQueue().offer(message);
 
@@ -86,13 +85,11 @@ public class MutualExclusionService {
     }
 
 	private void sendReplyMessage(Message message, String destHost, int destPort) {
-    	//System.out.println("Sending reply messages");
         //1. broadcast reply messages to all other nodes.
         send(message, destHost, destPort);
     }
 
     public synchronized void receiveReplyMessage(Message message) {
-    	//System.out.println("Receiving reply messages");
         //1. Increment clock
     	updateClock(message.getClock());
         //2. check for cs eligibility
@@ -100,7 +97,6 @@ public class MutualExclusionService {
     }
 
     private void sendReleaseMessage(Message message) {
-    	//System.out.println("Sending release messages");
         //1. broadcast release messages to all other nodes.
     	for (Node node : getNode().getNodeList()) {
             if (node.getID() == getNode().getID()) continue;
@@ -109,7 +105,6 @@ public class MutualExclusionService {
     }
 
     public synchronized void receiveReleaseMessage(Message message) {
-    	//System.out.println("Receiving release messages");
         //1. Increment clock;
     	updateClock(message.getClock());
         //2. remove the request message of the process which sent this message from queue.
@@ -119,7 +114,6 @@ public class MutualExclusionService {
     }
 
     private synchronized void checkCSEligibility(Message message) {
-    	//System.out.println("Inside eligibility check");
     	if(getCurrentRequest() == null || isCSEligible()) return;
     	
         //1. If received message has timestamp larger than that of its own request, add to receivedMessages list
@@ -127,8 +121,7 @@ public class MutualExclusionService {
         	getReceivedMessages().add(message.getID());
 
         //2. check if list size is equal to n-1 and that the top of queue is current request. If so, set csEligible to true.
-        if (getReceivedMessages().size() == getNode().getNumberOfNodes() - 1 
-        		&& getCurrentRequest().equals(getQueue().peek())) 
+        if (getReceivedMessages().size() == getNode().getNumberOfNodes() - 1 && getCurrentRequest().equals(getQueue().peek())) 
         	setCSEligible(true);
     }
 
@@ -138,8 +131,8 @@ public class MutualExclusionService {
         OutputStream os = null;
         ObjectOutputStream oos = null;
         try {
-            //s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
-            s = new Socket("127.0.0.1", destPort);
+            s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
+           // s = new Socket("127.0.0.1", destPort);
             os = s.getOutputStream();
             oos = new ObjectOutputStream(os);
             oos.writeObject(message);
