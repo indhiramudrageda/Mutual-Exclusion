@@ -5,6 +5,8 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 public class CSRequestGenerator extends Thread {
 
@@ -19,6 +21,8 @@ public class CSRequestGenerator extends Thread {
 	
 	@Override
 	public void run() {
+		List<Long> res = new ArrayList<>();
+		int n = node.getRequestsToGenerate();
 		try {
 			Thread.sleep(10000); //initial delay
 		} catch (InterruptedException e1) {
@@ -54,7 +58,8 @@ public class CSRequestGenerator extends Thread {
 				getNode().getMutexService().csLeave();
 				
 				long response = end-reqRaised;
-				System.out.println("Response time (in millis) at node: "+ getNode().getID() +" "+ response);
+				res.add(response);
+				//System.out.println("Response time (in millis) at node: "+ getNode().getID() +" "+ response);
 				
 				node.getCsIntervals().add(new long[] {start, end});
 				node.decrementRequestsToGenerate();
@@ -63,6 +68,10 @@ public class CSRequestGenerator extends Thread {
 				e.printStackTrace();
 			}
 		}
+				
+		Long avg = res.stream().reduce(0L, (a, b) -> a + b);
+		avg /= (long)n;
+		System.out.println("Response time avg at "+node.getID()+" "+ (long)avg);
 		getNode().getMutexTest().sendCSIntervals(node.getCsIntervals());
 	}
 
