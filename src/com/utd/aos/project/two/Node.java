@@ -6,7 +6,10 @@ package com.utd.aos.project.two;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +28,7 @@ public class Node {
 	
 	private MutualExclusionService mutexService;
 	private MutualExclusionTest mutexTest;
+	private CSRequestGenerator requestGenerator;
 	
 	private static final String CONFIG_FILE = "config.txt";
 	public static final int COORDINATOR = 0;
@@ -50,13 +54,31 @@ public class Node {
 		setMutexTest(new MutualExclusionTest(this));
 		
 		//Generate critical section requests periodically
-		CSRequestGenerator requestGenerator = new CSRequestGenerator(this);
+		requestGenerator = new CSRequestGenerator(this);
 		requestGenerator.start();
 		
 		//Listen to messages coming from other processes.
         MessageListener messageListener = new MessageListener(this);
         messageListener.start();
 	}
+	
+	public static void send(Object o, String destHost, int destPort) {
+        Socket s = null;
+        OutputStream os = null;
+        ObjectOutputStream oos = null;
+        try {
+            s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
+            //s = new Socket("127.0.0.1", destPort);
+            os = s.getOutputStream();
+            oos = new ObjectOutputStream(os);
+            oos.writeObject(o);
+            oos.close();
+            os.close();
+            s.close();
+        } catch (IOException e) {
+            System.out.println("Error sending data to " + destHost + ": " + e.getMessage());
+        }
+    }
 	
 	public static void main(String[] args) {
 		int numberOfNodes = 0;
@@ -193,6 +215,14 @@ public class Node {
 
 	public void setMutexTest(MutualExclusionTest mutexTest) {
 		this.mutexTest = mutexTest;
+	}
+
+	public CSRequestGenerator getRequestGenerator() {
+		return requestGenerator;
+	}
+
+	public void setRequestGenerator(CSRequestGenerator requestGenerator) {
+		this.requestGenerator = requestGenerator;
 	}
 
 	private static String preprocessConfig(String currentLine) {

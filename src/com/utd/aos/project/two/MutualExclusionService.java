@@ -1,10 +1,5 @@
 package com.utd.aos.project.two;
 
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.Socket;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.PriorityQueue;
@@ -17,8 +12,6 @@ public class MutualExclusionService {
     private Node node;
     private Message currentRequest; //unsafe
     private Set<Integer> receivedMessages; 
-    public int sentMsgs;
-    public int rcvdMsgs;
 
     public MutualExclusionService(Node node) {
         setNode(node);
@@ -64,7 +57,7 @@ public class MutualExclusionService {
         //1. broadcast request messages to all other nodes.
         for (Node node : getNode().getNodeList()) {
             if (node.getID() == getNode().getID()) continue;
-            send(getCurrentRequest(), node.getHostname(), node.getPort());
+            Node.send(getCurrentRequest(), node.getHostname(), node.getPort());
         }
     }
 
@@ -86,7 +79,7 @@ public class MutualExclusionService {
 
 	private void sendReplyMessage(Message message, String destHost, int destPort) {
         //1. broadcast reply messages to all other nodes.
-        send(message, destHost, destPort);
+        Node.send(message, destHost, destPort);
     }
 
     public synchronized void receiveReplyMessage(Message message) {
@@ -100,7 +93,7 @@ public class MutualExclusionService {
         //1. broadcast release messages to all other nodes.
     	for (Node node : getNode().getNodeList()) {
             if (node.getID() == getNode().getID()) continue;
-            send(message, node.getHostname(), node.getPort());
+            Node.send(message, node.getHostname(), node.getPort());
         }
     }
 
@@ -123,25 +116,6 @@ public class MutualExclusionService {
         //2. check if list size is equal to n-1 and that the top of queue is current request. If so, set csEligible to true.
         if (getReceivedMessages().size() == getNode().getNumberOfNodes() - 1 && getCurrentRequest().equals(getQueue().peek())) 
         	setCSEligible(true);
-    }
-
-    private void send(Message message, String destHost, int destPort) {
-    	sentMsgs++;
-        Socket s = null;
-        OutputStream os = null;
-        ObjectOutputStream oos = null;
-        try {
-            s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
-           // s = new Socket("127.0.0.1", destPort);
-            os = s.getOutputStream();
-            oos = new ObjectOutputStream(os);
-            oos.writeObject(message);
-            oos.close();
-            os.close();
-            s.close();
-        } catch (IOException e) {
-            System.out.println("Error sending data to " + destHost + ": " + e.getMessage());
-        }
     }
 
     public Node getNode() {
@@ -199,4 +173,5 @@ public class MutualExclusionService {
     public void setQueue(PriorityQueue<Message> queue) {
         this.queue = queue;
     }
+
 }

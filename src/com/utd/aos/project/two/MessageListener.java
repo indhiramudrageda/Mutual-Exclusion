@@ -31,6 +31,7 @@ public class MessageListener extends Thread{
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
     public void run()  
     { 
@@ -39,6 +40,7 @@ public class MessageListener extends Thread{
             try { 
             	// receive messages from other processes 
             	socket = tcpServersocket.accept();
+            	long rcvdTime = System.currentTimeMillis();
             	inStream = socket.getInputStream();
         		objectInputStream = new ObjectInputStream(inStream); 
                 Object obj = objectInputStream.readObject();
@@ -46,10 +48,11 @@ public class MessageListener extends Thread{
                 	getNode().getMutexTest().receiveCSIntervals((List<long[]>) obj);
                 } else {
                 	Message msg = (Message)obj;
-                	getNode().getMutexService().rcvdMsgs++;
                     if(msg.getType().equals(Message.TYPE_REQUEST)) getNode().getMutexService().receiveRequestMessage(msg);
                     else if(msg.getType().equals(Message.TYPE_REPLY)) getNode().getMutexService().receiveReplyMessage(msg);
                     else if(msg.getType().equals(Message.TYPE_RELEASE)) getNode().getMutexService().receiveReleaseMessage(msg);
+                    else if(msg.getType().equals(Message.TYPE_TIMESTAMP_REQUEST)) getNode().getMutexTest().receiveTimestampMessage(msg);
+                    else if(msg.getType().equals(Message.TYPE_TIMESTAMP_RESPONSE)) getNode().getRequestGenerator().receiveTimestampMessage(msg,rcvdTime);
                 }
             } 
             catch (IOException | ClassNotFoundException e) { 

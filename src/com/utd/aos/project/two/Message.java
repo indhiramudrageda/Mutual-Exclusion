@@ -10,13 +10,22 @@ public class Message implements Serializable{
 	private int ID;
 	private int clock;
 	private String type;
+	private long timestamp;
 	public static final String TYPE_REQUEST = "REQUEST";
 	public static final String TYPE_REPLY = "REPLY";
 	public static final String TYPE_RELEASE = "RELEASE";
+	public static final String TYPE_TIMESTAMP_REQUEST = "TIMESTAMP_REQUEST";
+	public static final String TYPE_TIMESTAMP_RESPONSE = "TIMESTAMP_RESPONSE";
 	
 	public Message(int ID, int clock, String type) {
 		this.ID = ID;
 		this.clock = clock;
+		this.type = type;
+	}
+	
+	public Message(int ID, long timestamp, String type) {
+		this.ID = ID;
+		this.setTimestamp(timestamp);
 		this.type = type;
 	}
 
@@ -44,6 +53,14 @@ public class Message implements Serializable{
 		this.type = type;
 	}
 	
+	public long getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		Message m = (Message)o;

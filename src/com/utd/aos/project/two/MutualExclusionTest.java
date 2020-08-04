@@ -1,10 +1,5 @@
 package com.utd.aos.project.two;
 
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,12 +21,17 @@ public class MutualExclusionTest {
 			getAllIntervals().add(csIntervals);
 			return;
 		}
-		send(csIntervals, coordinator.getHostname(), coordinator.getPort());
+		Node.send(csIntervals, coordinator.getHostname(), coordinator.getPort());
 	}
 	
 	public void receiveCSIntervals(List<long[]> csIntervals) {
 		getAllIntervals().add(csIntervals);
 		if(getAllIntervals().size() == getNode().getNumberOfNodes()) System.out.println("Does safety property hold: " +isAlgorithmSafe(getAllIntervals()));
+	}
+	
+	public void receiveTimestampMessage(Message msg) {
+		Node sender = getNode().getNodeList()[msg.getID()];
+		Node.send(new Message(getNode().getID(), System.currentTimeMillis(), Message.TYPE_TIMESTAMP_RESPONSE), sender.getHostname(), sender.getPort());
 	}
 	
 	private boolean isAlgorithmSafe(List<List<long[]>> allIntervals) {
@@ -50,37 +50,22 @@ public class MutualExclusionTest {
 		int[] prev = heap.poll();
 		if(allIntervals.get(prev[0]).size() >= 2) heap.offer(new int[] {prev[0], 1});
 		int[] first = heap.peek();
-		long end = allIntervals.get(first[0]).get(first[1])[0]+1000;
+		long end = allIntervals.get(first[0]).get(first[1])[0]+10000;
 		int count = 0;
 		while(!heap.isEmpty()) {
 			int[] curr = heap.poll();
 			if(allIntervals.get(curr[0]).get(curr[1])[1] <= end) count++;
-			if(allIntervals.get(prev[0]).get(prev[1])[1] > allIntervals.get(curr[0]).get(curr[1])[0]) 
+			if(allIntervals.get(prev[0]).get(prev[1])[1] > allIntervals.get(curr[0]).get(curr[1])[0]) {
+				System.out.println("prev: "+allIntervals.get(prev[0]).get(prev[1])[1]+" curr: "+allIntervals.get(curr[0]).get(curr[1])[0]);
+				System.out.println("prev: "+prev[0]+" curr: "+curr[0]);
 				return false;
+			}
 			if(curr[1]+1 < allIntervals.get(prev[0]).size()) heap.offer(new int[]{curr[0], curr[1]+1});
 			prev = curr;
 		} 
-		System.out.println("System throughput (requests completed/sec): "+ count);
+		System.out.println("System throughput (requests completed/sec): "+ count/10);
 		return true;
 	}
-
-	private void send(List<long[]> csIntervals, String destHost, int destPort) {
-        Socket s = null;
-        OutputStream os = null;
-        ObjectOutputStream oos = null;
-        try {
-            s = new Socket(InetAddress.getByName(destHost).getHostAddress(), destPort);
-            //s = new Socket("127.0.0.1", destPort);
-            os = s.getOutputStream();
-            oos = new ObjectOutputStream(os);
-            oos.writeObject(csIntervals);
-            oos.close();
-            os.close();
-            s.close();
-        } catch (IOException e) {
-            System.out.println("Error sending data to " + destHost + ": " + e.getMessage());
-        }
-    }
 
 	public Node getNode() {
 		return node;
